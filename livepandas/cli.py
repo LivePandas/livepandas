@@ -8,7 +8,6 @@ import tornado.ioloop
 import tornado.web
 
 SERVER_BASE = 'http://livepandas.com'
-SERVER_BASE = 'http://localhost:8000'
 
 class LocalServer(threading.Thread):
 
