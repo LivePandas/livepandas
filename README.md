@@ -7,7 +7,6 @@ LivePandas
 
 Command line tool and library to run your own visualization and upload them to livepandas.com
 
------
 Usage
 -----
 
@@ -40,8 +39,7 @@ Notice the json format for the kwargs, this will give you some freedom to test y
 Test the html/js/css code
 =========================
 
-Creating the socket
--------------------
+= Creating the socket
 
 First we need to upload the python code to our servers or run it locally as:
 
@@ -74,8 +72,7 @@ $.getJSON('http://www.livepandas.com/api/v1/canvas_sessions/3/', function (data,
 
 Now we have a socket to connect. This socket will be alive during the session, and the session is alive during the next 5 minutes of the last api interaction, so, try to do some get to the canvas session to keep it alive.
 
-Using the socket
-----------------
+= Using the socket
 
 Well, this is pretty straightforward javascript code:
 
@@ -88,6 +85,6 @@ $.getJSON(socket, {kwargs: JSON.stringify({x: 1, y: 2}), function (data, textSta
 So, notice that you need to force the json format too, since you may be using any library sending all the params either in `application/json` or `application/x-www-form-urlencoded`.
 
 Streaming the response
-----------------------
+======================
 
 More on this later.
