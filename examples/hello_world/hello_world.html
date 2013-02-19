@@ -1,0 +1,31 @@
+<html>
+  <head>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>   
+    <script type="text/javascript">
+      $(document).ready(function () {
+        $('input').on('change keydown keyup', function () {
+          // Get values.
+          var x = parseInt($("input[name='x']").val(), 10);
+          var y = parseInt($("input[name='y']").val(), 10);      
+          $.getJSON('/add', {kwargs: JSON.stringify({x: x, y:y})}, function (d, s, x) {
+            $('h2').html("Result: " + d.result);
+          });
+        });      
+      });
+    </script>
+  </head>
+  <body>
+    <h1>Hello World</h1>
+
+    <p>
+      <b>x: </b><input name="x"> 
+    </p>
+
+    <p>
+      <b>y: </b><input name="y"> 
+    </p>
+
+    <h2>Result: None</h2>
+
+  </body>
+</html>

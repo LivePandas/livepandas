@@ -1,0 +1,58 @@
+<html>
+  <head>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>   
+    <script type="text/javascript">
+
+window.canvas_id = 74;
+window.session_id = null;
+
+function wait_for_socket() {
+ 
+  // Url of the session resource.
+  var url = 'http://livepandas.com/api/v1/canvas_sessions/' + window.session_id + '/';
+
+  $.getJSON(url, function(d,s,x){
+    if (d.socket != null) {
+      $('h2#socket').html('Using socket: ' + d.socket);
+      $('input').on('change keydown keyup', function () {
+        // Get values.
+        var x = parseInt($("input[name='x']").val(), 10);
+        var y = parseInt($("input[name='y']").val(), 10);      
+        $.getJSON('http://' + d.socket + '/add', {kwargs: JSON.stringify({x: x, y:y})}, function (d, s, x) {
+          $('h2#result').html("Result: " + d.result);
+        });
+      });        
+    } else {
+      // Wait a second and try again.
+      setTimeout(wait_for_socket, 1000);
+    }
+  });
+}
+
+$(document).ready(function () {			   
+  var url = 'http://livepandas.com/api/v1/canvas_sessions/';			   
+  $.post(url, {canvas: canvas_id}, function(d, s, x) {
+    window.session_id = d.id;
+    wait_for_socket();
+  });  
+});
+
+    </script>
+  </head>
+  <body>
+    <h1>Hello World</h1>
+
+    <h2 id="socket"></h2>
+
+    <p>
+      <b>x: </b><input name="x"> 
+    </p>
+
+    <p>
+      <b>y: </b><input name="y"> 
+    </p>
+
+    <h2 id="result">Result: None</h2>
+
+  </body>
+</html>
