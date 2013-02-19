@@ -1,5 +1,4 @@
 
-==========
 LivePandas
 ==========
 
@@ -12,8 +11,7 @@ Usage
 
 First you need to create an html page with the content of your visualization and a python file with the code associated.
 
-Test the Python code
-====================
+### Test the Python code
 
 In your python file you need to give a name to the function you want to register starting with `livepandas_`:
 
@@ -36,10 +34,9 @@ livepandas -P code.py --test addition --kwargs '{"x": 1, "y": 2}'
 
 Notice the json format for the kwargs, this will give you some freedom to test your code with arbitrary data.
 
-Test the html/js/css code
-=========================
+### Test the html/js/css code
 
-= Creating the socket
+#### Creating the socket
 
 First we need to upload the python code to our servers or run it locally as:
 
@@ -72,7 +69,7 @@ $.getJSON('http://www.livepandas.com/api/v1/canvas_sessions/3/', function (data,
 
 Now we have a socket to connect. This socket will be alive during the session, and the session is alive during the next 5 minutes of the last api interaction, so, try to do some get to the canvas session to keep it alive.
 
-= Using the socket
+#### Using the socket
 
 Well, this is pretty straightforward javascript code:
 
@@ -84,7 +81,6 @@ $.getJSON(socket, {kwargs: JSON.stringify({x: 1, y: 2}), function (data, textSta
 
 So, notice that you need to force the json format too, since you may be using any library sending all the params either in `application/json` or `application/x-www-form-urlencoded`.
 
-Streaming the response
-======================
+### Streaming the response
 
 More on this later.
