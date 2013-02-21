@@ -1,100 +1,32 @@
+from __future__ import absolute_import
+
 import argparse
 import requests
 import json
 import time
 import sys
-import threading
-import tornado.ioloop
-import tornado.web
+
+from .server import LocalServer
 
 SERVER_BASE = 'http://livepandas.com'
 
-class StaticHandler(tornado.web.RequestHandler):
-    def initialize(self, static):
-        self.static = static
-
-    def get(self):
-        self.write(self.static)                
-
-
-class FunctionHandler(tornado.web.RequestHandler):
-    def initialize(self, func):
-        self.func = func
-
-    def get(self):        
-        try:
-            kwargs = json.loads(self.get_argument('kwargs', '{}'))
-            data = {'result': self.func(**kwargs)}
-        except Exception, e:
-            data = {'exception': str(e)}
-            self.set_status(400)
-            
-        self.write(json.dumps(data))
-
-
-class LocalServer(threading.Thread):
-
-    def add_python(self, code):
-        " Add the python functions. "
-
-        ns = {}
-        exec compile(code, '<string>', 'exec') in ns
-
-        # Check for the registered.
-        functions = [(k, v) for k, v in ns.items() if k.startswith('livepandas_') and callable(v)]
-
-        # Define one handler per function.
-        for name, func in functions:
-            path = r"/" + name.replace('livepandas_', '')
-            print " * Adding handler at '%s'" % (path, )
-            self.handlers.append((path , FunctionHandler, {'func': func}))
-
-    def __init__(self, html=None, code=None, port=8888):
-        threading.Thread.__init__(self)
-
-        # Create the application.
-        print " * Creating Tornado application."
-        self.handlers = []
-        if html != None:
-            print " * Add html handler."
-            self.handlers.append((r'/', StaticHandler, {'static': html}))
-
-        # Add python code if needed.
-        if code is not None:
-            self.add_python(code)
-
-        application = tornado.web.Application(self.handlers)
-
-        # Start listening.
-        application.listen(port)
-
-        # IO Loop instance.
-        self.ioloop = tornado.ioloop.IOLoop.instance()
-
-    def run(self):
-        print " * Local server started. Hit Ctrl-C to stop it."
-        self.ioloop.start()
-
-    def stop(self):
-        self.ioloop.stop()
-
-
-def create_canvas(python_code, html_code=None):
+def create_canvas(username, key, python=None, html=None):
     """ Create a canvas with the python and html code."""
-
-    headers = {'Content-Type': 'application/json'}
-    
+        
     # Create an anonymous canvas (will be deleted after 5 minutes of the last usage)
-    response = requests.post(SERVER_BASE + '/api/v1/canvases/', 
-                             json.dumps({'python': python_code, 'author': None}),
-                             headers=headers)
-    
+    response = requests.post(
+        SERVER_BASE + '/api/v1/canvases/', json.dumps({'python': python}),
+        headers={'Content-Type': 'application/json',
+                 'Authorization': 'APIKey %s:%s' % (username, key)})
+
+    # Check for correct creation.
     if response.status_code != 201:
-        raise Exception("API error creating the Canvas.")
+        raise Exception("API error creating the Canvas (%d)." % (response.status_code, ))
         
     # Canvas created.
     canvas = response.json()
     print " * We have a canvas: %d" % (canvas['id'])    
+    print "   Functions: %s" % (", ".join(canvas['functions']), )
     
     return canvas
     
@@ -106,16 +38,15 @@ def ask_for_socket(code, port=False):
         thread = LocalServer(None, code, port)
         thread.start()
         return ('localhost:%d' % (port, ), thread)
-    
+
+    # Create a new canvas for this.
     canvas = create_canvas(code)
 
-    # Create canvas and session.
-    s = requests.Session()
-    s.headers = {'Content-Type': 'application/json'}
-
     # Create a session for this canvas.
-    response = s.post(SERVER_BASE + '/api/v1/canvas_sessions/',
-                      json.dumps({'canvas': canvas['id']}))
+    response = requests.post(
+        SERVER_BASE + '/api/v1/canvas_sessions/',
+        json.dumps({'canvas': canvas['id']}), 
+        headers={'Content-Type': 'application/json'})
 
     if response.status_code != 201:
         raise Exception("API error creating the Canvas.")
@@ -184,57 +115,82 @@ def test(python_code, name, kwargs, local=False):
 
     # Destroy the socket.
     destroy_socket(session_id)
-        
+
+def get_auth(args):
+    """ Get the authentication parameters. """
+
+    if args.username is None:
+        username = raw_input("Username: ")
+        key = raw_input("API key: ")          
+        return username, key
+
+    if args.username is None:
+        key = raw_input("API key: ")          
+        return args.username, key
+
+    return args.username, args.key        
+
+def test_function(python_code, function_name, kwargs):
+    """ Test a function locally. """
+
+    print(" * Testing function %s ..." % (function_name, ))
+
+    ns = {}
+
+    exec compile(python_code, '<string>', 'exec') in ns
+
+    # Look for the function.
+    if 'livepandas_%s' % (function_name, ) not in ns:
+        raise Exception("Function %s not defined." % (function_name, ))
+
+    # Convert kwargs from json.
+    kwargs = json.loads(kwargs)
+
+    result = ns['livepandas_%s' % (function_name, )](**kwargs)
+
+    print("   Result: %s." % (result))
+
 
 def main(argv=None):
 
     # Build argument parser.
     parser = argparse.ArgumentParser(description='Giving life to your data.')
 
+    # Authentications.
+    parser.add_argument('-U', '--username', help="Username for authenticated requests.")
+    parser.add_argument('-K', '--key', help="API Key for authenticated requests.")
+
     # Python code.
-    parser.add_argument('-P', '--python', help="File with python code.", dest="python", default=False)
+    parser.add_argument('-P', '--python', help="File with python code.", 
+                        dest="python", default=False)
 
-    # Run the server.
-    parser.add_argument('--run', help="Run the server.", action="store_true", default=False)
+    # Give an html page.
+    parser.add_argument('-H', '--html', help="Html for the canvas view.", 
+                        dest='html', default=False)
 
-    # Run the server.
-    parser.add_argument('--local', help="Run the server locally", action="store_true", default=False)
+    # Give the localtion of the static directory.
+    parser.add_argument('-S', '--static', help="Static directory used in the html.", 
+                        dest='html', default=False)
+
+    # Extra for the local server.
     parser.add_argument('--port', type=int, help="Local server in this port", default=8888)
     
     # Test a function.
     parser.add_argument('--test', help="Test a function", default=False)
 
     # kwards for the tested function.
-    parser.add_argument('--kwargs', help="Keyword arguments to sent to the function as json. eg: '{\"x\": 1}'", default="{}")
+    parser.add_argument(
+        '--kwargs', 
+        help="Keyword arguments to sent to the function as json. eg: '{\"x\": 1}'", 
+        default="{}")
 
-    # Give an html page.
-    parser.add_argument('-H', '--html', help="Html for the canvas view.", dest='html', default=False)
-
-    # Canvas parameter.
-    parser.add_argument('--canvas', help="Create a new canvas.", action="store_true", default=False)
+    # Create a new canvas parameter.
+    parser.add_argument('--new', help="Create a new canvas.", action="store_true", 
+                        default=False)
 
     # Parse.
     args = parser.parse_args(argv)
 
-    if args.run:
-
-        # Read the python code.
-        with open(args.python, 'r') as fd:
-            python_code = fd.read()
-
-        # Run the code.
-        run(python_code, local=args.local)
-
-    if args.test:        
-
-        # Read the python code.
-        with open(args.python, 'r') as fd:
-            python_code = fd.read()
-    
-        # Test the function.
-        test(python_code, args.test, args.kwargs, local=args.port if args.local else False)
-
-    
     # Get the html code.
     html_code = None
     if args.html:
@@ -249,13 +205,21 @@ def main(argv=None):
         with open(args.python, 'r') as fd:
             python_code = fd.read()
 
-    if args.canvas:        
-        create_canvas(python_code)
+    if args.test:    
+        # Test the function.
+        test_function(python_code, args.test, args.kwargs)
 
-    # If also local use the same port to execute the functions.
-    elif html_code != None: 
+    elif args.new:        
+
+        # This requests needs authentication.
+        username, key = get_auth(args)
+        create_canvas(username, key, python=python_code, html=html_code)
+
+    else:
+        # Finally assume we want to run the code, assumming locally.
+
         # Run tornado with this webpage.
-        t = LocalServer(html_code, python_code, args.port)
+        t = LocalServer(html=html_code, python=python_code, port=args.port)
         t.start()
 
         try:

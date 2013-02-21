@@ -1,0 +1,38 @@
+<html>
+  <head>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>   
+    <script type="text/javascript">
+      $(document).ready(function () {
+        // Open WebSocket.
+        var ws = new WebSocket("ws://localhost:8888/add/websocket");
+
+        ws.onmessage = function (evt) {
+          var data = JSON.parse(evt.data);
+          if ('result' in data) 
+            $('h2').html("Result: " + data['result']);
+        }
+
+        $('input').on('change keydown keyup', function () {
+          // Get values.
+          var x = parseInt($("input[name='x']").val(), 10);
+          var y = parseInt($("input[name='y']").val(), 10);
+          ws.send(JSON.stringify({x: x, y:y}));         
+        });      
+      });
+    </script>
+  </head>
+  <body>
+    <h1>Hello World</h1>
+
+    <p>
+      <b>x: </b><input name="x"> 
+    </p>
+
+    <p>
+      <b>y: </b><input name="y"> 
+    </p>
+
+    <h2>Result: None</h2>
+
+  </body>
+</html>

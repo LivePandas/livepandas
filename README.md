@@ -6,27 +6,54 @@ LivePandas
 
 Command line tool and library to run your own visualization and upload them to livepandas.com
 
+
+
+Installation
+------------
+
+This is pretty beta at this moment but you can install it from pip using:
+
+```bash
+pip install livepandas
+```
+
+The package has a few dependencies which are pretty basic and standard.
+
+
 Usage
 -----
 
 This tool will let you use livepandas.com in different ways. You can start by debugging your python and html code, running locally the system and then upload the files to our servers.
 
-### Test the Python code
 
-In your python file you need to give a name to the function you want to register starting with `livepandas_`:
+What is a Canvas?
+-----------------
+
+We call Canvas to the combination of view (html/css/js) and backend code (python) that ultimately defines a single page that build a visualization for your data.
+
+The basic components are a python script that mostly is a single python file and a html file wish possible some static resources as css/js files or images.
+
+
+Test the python code of a canvas
+--------------------------------
+
+Create a python file with the code you want to delegate, the function names must start with `livepandas_` to be delegated to our servers. Eg:
 
 ```python
+# Published as 'addition'
 def livepandas_addition(x, y):
     return x + y
+
+# Not published.
+def subtract(x, y):
+    return x - y
+
+# Published as 'subtract'
+def livepandas_subtract(x, y):
+    return substract(x, y)
 ```
 
-You can test this code locally using the cli with:
-
-```bash
-livepandas -P code.py --test addition --kwargs '{"x": 1, "y": 2}' --local
-```
-
-or if you want to test it in our servers with:
+The code can be tested directly fro the command line using:
 
 ```bash
 livepandas -P code.py --test addition --kwargs '{"x": 1, "y": 2}'
@@ -34,21 +61,87 @@ livepandas -P code.py --test addition --kwargs '{"x": 1, "y": 2}'
 
 Notice the json format for the kwargs, this will give you some freedom to test your code with arbitrary data.
 
-### Test the html/js/css code
+You can also start a server with the code and use it from your machine:
 
-To test the html code we can take two approaches, running all the code locally and then run the python code in our servers.
+```bash
+livepandas -P code.py
+```
 
-### Running all the code locally
+or
 
-Given two files `view.html` and `code.py` the easiest way to run all the system is using the command:
+```bash
+livepandas -P code.py --port 9999
+```
+
+this will start a local server listening by default in the port 8888. For the example above the functions will be accesible at /addition and /subtract for GET requests and /addition/ws and /subtract/ws as websockets.
+
+To test the servers use javascript or python like:
+
+```python
+import requests
+import json
+
+response = requests.get('http://localhost:8888/addition', 
+                        params={'kwargs': json.loads({'x': 1, 'y': 1})})
+print response.json()['result']
+```
+
+Upload the canvas code
+----------------------
+
+You can upload the code using the next command (it will ask for authentication):
+
+```bash
+livepandas --new -P code.py
+```
+or
+```bash
+livepandas -P code.py --new --username jorgeecardona
+
+```
+or
+```bash
+livepandas -P code.py --new --username jorgeecardona --key 123456789abcdef123456789abcdef
+```
+
+A canvas will be added to your account and you will be provided with an id for further usage.
+
+A Canvas is still not accesible you need to create a canvas session which consists of a similar server listening in a public address on internet that execute your code.
+
+Testing the code in our servers
+-------------------------------
+
+For this you will need to create an account in the webpage, go to: http://livepandas.com/accounts/register. You will see in your profile a button to create API keys, create one, you will need it to upload the code.
+
+The process of create a canvas is simple just execute:
+
+```bash
+livepandas -P code.py --new
+```
+this will ask for username and API key, or add them as:
+
+```bash
+livepandas -P code.py --new --username jorgeecardona --key 123456789abcdef123456789abcdef
+```
+
+The process will create a new canvas, it will report the id and the published functions.
+
+You will know how to use this information in a moment to actually get a living server in our infrastructure.
+
+Test the html/js/css code
+-------------------------
+
+You can run in a local server your code with the command:
+
 
 ```bash
 livepandas -P code.py -H view.html
 ```
 
-You can check on the example directory for some simple cases, you can use cdnjs.com to get the most used js libraries. But don't worry you would be able to use a `static` directory to host any static asset you need.
+Just as before but you have now the html code for the view and you can use the functions from the file `code.py`. Check on the example directory for some simple cases, you can use cdnjs.com to get the most used js libraries. But don't worry you would be able to use a `static` directory to host any static asset you need.
 
 Notice that the most basic way to use this is with a javascript code like this:
+
 ```javascript
 $(document).ready(function () {
   $('input').on('change keydown keyup', function () {
@@ -61,17 +154,21 @@ $(document).ready(function () {
   });      
 });
 ```
+
 This code wait for changes in two inputs and then send the values to a function that add them and put the result back in a title.
 
 Can you imagine doing some nice fft over huge data like this?
 
-### Running just the html locally.
+Run html local and python in our servers
+----------------------------------------
 
 In this case you can create the canvas first using:
+
 ```bash
-livepandas --canvas -P code.py
+livepandas --new -P code.py
 ```
-This will give you a canvas id (without any authentication the canvas will be temporary). then you can use something like this:
+
+This will give you a canvas id, then you can do something like this:
 
 ```javascript
 
@@ -115,6 +212,65 @@ $(document).ready(function () {
 
 It basically creates a session, waits for a valid websocket and then use it to add the numbers.
 
+Notice that you can use this from Backbone too, and virtually from any js helper library.
+
+WebSockets? Hell yeah!
+----------------------
+
+Every server will have a copy for websockets at `/method/ws`, you can see a similar example as above using websockets:
+
+```javascript
+
+window.canvas_id = 75;
+
+function prepare_socket(websocket, name) {
+
+  $('h2#socket').html('Using WebSocket: ' + websocket);
+
+  // Create a WebSocket
+  var ws = new WebSocket("ws://" + websocket + "/" + name + "/ws");
+
+  // On Message.
+  ws.onmessage = function (evt) {
+    var data = JSON.parse(evt.data);
+    if ('result' in data) 
+      $('h2#result').html("Result: " + data['result']);  
+  }
+
+  // Wait for changes in the text.
+  $('input').on('change keydown keyup', function () {
+    // Get values.
+    var x = parseInt($("input[name='x']").val(), 10);
+    var y = parseInt($("input[name='y']").val(), 10);
+    ws.send(JSON.stringify({x: x, y:y}))  
+  });
+}
+
+function wait_for_socket() {
+ 
+  // Url of the session resource.
+  var url = 'http://livepandas.com/api/v1/canvas_sessions/' + window.session_id + '/';
+
+  $.getJSON(url, function(d,s,x){
+    if (d.socket != null) {
+      // Prepare Socket to be used.
+      prepare_socket(d.socket, 'add');
+    } else {
+      // Wait a second and try again.
+      setTimeout(wait_for_socket, 1000);
+    }
+  });
+}
+
+$(document).ready(function () {			   
+  var url = 'http://livepandas.com/api/v1/canvas_sessions/';			   
+  $.post(url, {canvas: canvas_id}, function(d, s, x) {
+    window.session_id = d.id;
+    wait_for_socket();
+  });  
+});
+```
+
 ### Creating the socket from CLI
 
 First we need to upload the python code to our servers or run it locally as:
@@ -125,18 +281,20 @@ livepandas -P code.py --new --username jorgeecardona
 or
 
 ```bash
-livepandas -P code.py --new --username jorgeecardona --local
+livepandas -P code.py
 ```
 
-In the first case you will get an Id for the new canvas, and is going to show up in your home page at www.livepandas.com, the command will ask for password. In the second case
-you will get a socket to connect running the code. 
+In the first case you will get an Id for the new canvas, and is going to show up in your home page at www.livepandas.com. In the second case you will get a socket to connect running the code. 
 
-
-If your using our servers you still need to create a session to use the codd, but don't worry this is easy step. With javascript we need first to get a `CanvasSession` object using the endpoint `/api/v1/canvas_sessions/` as (change the canvas id approperly):
+If your using our servers you still need to create a session to use the code, but don't worry this is easy step. With javascript we need first to get a _canvas session_ object using the endpoint `/api/v1/canvas-sessions/` as: ()
 
 ```javascript
+
+// Change the canvas id.
+window.canvas_id = 1;
+
 $.post('http://www.livepandas.com/api/v1/canvas_sessions/', {
-    canvas: 1
+    canvas: window.canvas_id
 });
 ```
 It will take approximately 3 seconds to create a websocket, fetch again the session with a get:
