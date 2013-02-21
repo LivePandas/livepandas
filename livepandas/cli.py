@@ -44,7 +44,7 @@ def ask_for_socket(code, port=False):
 
     # Create a session for this canvas.
     response = requests.post(
-        SERVER_BASE + '/api/v1/canvas_sessions/',
+        SERVER_BASE + '/api/v1/canvas-sessions/',
         json.dumps({'canvas': canvas['id']}), 
         headers={'Content-Type': 'application/json'})
 

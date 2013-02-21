@@ -9,7 +9,7 @@ window.session_id = null;
 function wait_for_socket() {
  
   // Url of the session resource.
-  var url = 'http://livepandas.com/api/v1/canvas_sessions/' + window.session_id + '/';
+  var url = 'http://livepandas.com/api/v1/canvas-sessions/' + window.session_id + '/';
 
   $.getJSON(url, function(d,s,x){
     if (d.socket != null) {
@@ -30,7 +30,7 @@ function wait_for_socket() {
 }
 
 $(document).ready(function () {			   
-  var url = 'http://livepandas.com/api/v1/canvas_sessions/';			   
+  var url = 'http://livepandas.com/api/v1/canvas-sessions/';			   
   $.post(url, {canvas: canvas_id}, function(d, s, x) {
     window.session_id = d.id;
     wait_for_socket();

@@ -178,7 +178,7 @@ window.session_id = null;
 function wait_for_socket() {
  
   // Url of the session resource.
-  var url = 'http://livepandas.com/api/v1/canvas_sessions/' + window.session_id + '/';
+  var url = 'http://livepandas.com/api/v1/canvas-sessions/' + window.session_id + '/';
 
   $.getJSON(url, function(d,s,x){
     if (d.socket != null) {
@@ -201,7 +201,7 @@ function wait_for_socket() {
 
 $(document).ready(function () {			   
   // Create the canvas session in here.
-  var url = 'http://livepandas.com/api/v1/canvas_sessions/';			   
+  var url = 'http://livepandas.com/api/v1/canvas-sessions/';			   
   $.post(url, {canvas: canvas_id}, function(d, s, x) {
     window.session_id = d.id;
     // Wait for the valid socket.
@@ -249,7 +249,7 @@ function prepare_socket(websocket, name) {
 function wait_for_socket() {
  
   // Url of the session resource.
-  var url = 'http://livepandas.com/api/v1/canvas_sessions/' + window.session_id + '/';
+  var url = 'http://livepandas.com/api/v1/canvas-sessions/' + window.session_id + '/';
 
   $.getJSON(url, function(d,s,x){
     if (d.socket != null) {
@@ -263,7 +263,7 @@ function wait_for_socket() {
 }
 
 $(document).ready(function () {			   
-  var url = 'http://livepandas.com/api/v1/canvas_sessions/';			   
+  var url = 'http://livepandas.com/api/v1/canvas-sessions/';			   
   $.post(url, {canvas: canvas_id}, function(d, s, x) {
     window.session_id = d.id;
     wait_for_socket();
@@ -293,13 +293,13 @@ If your using our servers you still need to create a session to use the code, bu
 // Change the canvas id.
 window.canvas_id = 1;
 
-$.post('http://www.livepandas.com/api/v1/canvas_sessions/', {
+$.post('http://www.livepandas.com/api/v1/canvas-sessions/', {
     canvas: window.canvas_id
 });
 ```
 It will take approximately 3 seconds to create a websocket, fetch again the session with a get:
 ```javacript
-$.getJSON('http://www.livepandas.com/api/v1/canvas_sessions/3/', function (data, textStatus, jqXHR) {
+$.getJSON('http://www.livepandas.com/api/v1/canvas-sessions/3/', function (data, textStatus, jqXHR) {
     alert(data.socket);
 });
 ```
