@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='livepandas',
-    version="0.1.4",
+    version="0.1.5",
     packages=['livepandas'],
     install_requires=[
         'requests',

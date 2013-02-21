@@ -9,13 +9,23 @@ import sys
 from .server import LocalServer
 
 SERVER_BASE = 'http://livepandas.com'
+SERVER_BASE = 'http://localhost:8000'
 
 def create_canvas(username, key, python=None, html=None):
     """ Create a canvas with the python and html code."""
         
+    # Data to sent.
+    data = {}
+
+    if python is not None:
+        data['python'] = python
+
+    if html is not None:
+        data['html'] = html        
+
     # Create an anonymous canvas (will be deleted after 5 minutes of the last usage)
     response = requests.post(
-        SERVER_BASE + '/api/v1/canvases/', json.dumps({'python': python}),
+        SERVER_BASE + '/api/v1/canvases/', json.dumps(data),
         headers={'Content-Type': 'application/json',
                  'Authorization': 'APIKey %s:%s' % (username, key)})
 
