@@ -9,7 +9,6 @@ import sys
 from .server import LocalServer
 
 SERVER_BASE = 'http://livepandas.com'
-SERVER_BASE = 'http://localhost:8000'
 
 def create_canvas(username, key, python=None, html=None):
     """ Create a canvas with the python and html code."""
@@ -31,6 +30,7 @@ def create_canvas(username, key, python=None, html=None):
 
     # Check for correct creation.
     if response.status_code != 201:
+        print response.content
         raise Exception("API error creating the Canvas (%d)." % (response.status_code, ))
         
     # Canvas created.
