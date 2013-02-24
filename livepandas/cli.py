@@ -5,10 +5,90 @@ import requests
 import json
 import time
 import sys
+import os
 
 from .server import LocalServer
 
 SERVER_BASE = 'http://livepandas.com'
+
+def update_canvas(canvas_id, username, key, python=None, html=None):
+    """ Update an existing canvas. """
+
+    data = {}
+
+    if python is not None:
+        data['python'] = python
+        
+    if html is not None:
+        data['html'] = html
+
+    # Create an anonymous canvas (will be deleted after 5 minutes of the last usage)
+    response = requests.put(
+        SERVER_BASE + '/api/v1/canvases/%d/' % (canvas_id), json.dumps(data), headers={
+            'Content-Type': 'application/json',
+            'Authorization': 'APIKey %s:%s' % (username, key)})
+
+    # Check for correct creation.
+    if response.status_code != 200:
+        raise Exception("API error updating the canvas (%d)." % (response.status_code, ))
+    
+    print(" * The canvas was correctly upated.")
+        
+
+def list_canvases(username, key):
+    """ List the canvases of an user."""
+
+    # Create an anonymous canvas (will be deleted after 5 minutes of the last usage)
+    response = requests.get(
+        SERVER_BASE + '/api/v1/canvases/', headers={
+            'Content-Type': 'application/json',
+            'Authorization': 'APIKey %s:%s' % (username, key)})
+
+    # Check for correct creation.
+    if response.status_code != 200:
+        raise Exception("API error retrieving the canvases (%d)." % (response.status_code, ))
+
+    # Canvas created.
+    results = response.json()
+    print("You have %d canvases." % (results['count'], ))
+    for canvas in results['results']:
+        print(" Canvas: %d" % (canvas['id'], ))
+        
+
+def download_canvas(canvas_id, username, key):
+    """ Download a canvas. """
+
+    # Create an anonymous canvas (will be deleted after 5 minutes of the last usage)
+    response = requests.get(
+        SERVER_BASE + '/api/v1/canvases/%d/' % (canvas_id, ), headers={
+            'Content-Type': 'application/json',
+            'Authorization': 'APIKey %s:%s' % (username, key)})
+
+    # Check for correct creation.
+    if response.status_code != 200:
+        raise Exception("API error retrieving canvas (%d)." % (response.status_code, ))
+
+    # Canvas created.
+    canvas = response.json()
+
+    # Create a path to put this.
+    base_path = "canvases/%d/" % (canvas_id, )
+    print(" * Create %s to save the canvas..." % (base_path, ))
+    try:
+        os.makedirs(base_path)
+    except OSError, e:
+        if e.errno != 17:
+            raise e
+    
+    # Create Python file.
+    if canvas['python'] != '':
+        with open('%scode.py' % (base_path, ), 'w') as fd:
+            fd.write(canvas['python'])
+
+    if canvas['html'] != '':
+        with open('%sview.html' % (base_path, ),'w') as fd:
+            fd.write(canvas['html'])
+    
 
 def create_canvas(username, key, python=None, html=None):
     """ Create a canvas with the python and html code."""
@@ -30,7 +110,6 @@ def create_canvas(username, key, python=None, html=None):
 
     # Check for correct creation.
     if response.status_code != 201:
-        print response.content
         raise Exception("API error creating the Canvas (%d)." % (response.status_code, ))
         
     # Canvas created.
@@ -198,6 +277,13 @@ def main(argv=None):
     parser.add_argument('--new', help="Create a new canvas.", action="store_true", 
                         default=False)
 
+    # Download a canvas.
+    parser.add_argument('--update', type=int, help="Update a canvas.", default=False)
+    parser.add_argument('--download', type=int, help="Download a canvas.", default=False)
+    parser.add_argument('--list', help="List your canvases.", action="store_true", 
+                        default=False)
+    
+
     # Parse.
     args = parser.parse_args(argv)
 
@@ -216,15 +302,20 @@ def main(argv=None):
             python_code = fd.read()
 
     if args.test:    
-        # Test the function.
         test_function(python_code, args.test, args.kwargs)
-
+    elif args.list:
+        username, key = get_auth(args)
+        list_canvases(username, key)
+    elif args.download:
+        username, key = get_auth(args)
+        download_canvas(args.download, username, key)        
+    elif args.update:
+        username, key = get_auth(args)
+        update_canvas(args.update, username, key, python=python_code, html=html_code)        
     elif args.new:        
-
         # This requests needs authentication.
         username, key = get_auth(args)
         create_canvas(username, key, python=python_code, html=html_code)
-
     else:
         # Finally assume we want to run the code, assumming locally.
 

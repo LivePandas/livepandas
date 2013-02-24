@@ -33,7 +33,6 @@ We call Canvas to the combination of view (html/css/js) and backend code (python
 
 The basic components are a python script that mostly is a single python file and a html file wish possible some static resources as css/js files or images.
 
-
 Test the python code of a canvas
 --------------------------------
 
@@ -86,8 +85,8 @@ response = requests.get('http://localhost:8888/addition',
 print response.json()['result']
 ```
 
-Upload the canvas code
-----------------------
+Upload (Download and Update) the canvas code
+--------------------------------------------
 
 You can upload the code using the next command (it will ask for authentication):
 
@@ -97,14 +96,25 @@ livepandas --new -P code.py
 or
 ```bash
 livepandas -P code.py --new --username jorgeecardona
-
 ```
 or
 ```bash
 livepandas -P code.py --new --username jorgeecardona --key 123456789abcdef123456789abcdef
 ```
-
 A canvas will be added to your account and you will be provided with an id for further usage.
+
+You can list your canvas using:
+```bash
+livepandas --list -U jorgeecardona
+```
+and download a previous canvas:
+```bash
+livepandas --download 89 -U jorgeecardona
+```
+make any change and upload it back with:
+```bash
+livepandas --update 89 -H view.html -P code.py -U jorgeecardona
+```
 
 A Canvas is still not accesible you need to create a canvas session which consists of a similar server listening in a public address on internet that execute your code.
 
